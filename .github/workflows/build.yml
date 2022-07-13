@@ -1,36 +1,54 @@
-# This is a basic workflow to help you get started with Actions
+on: [push, pull_request]
 
-name: CI
-
-# Controls when the workflow will run
-on:
-  # Triggers the workflow on push or pull request events but only for the "master" branch
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+  build_job:
+    runs-on: ubuntu-18.04
+    name: Build on archarm_latest aarch64
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2.1.0
+      - uses: uraimo/run-on-arch-action@v2.1.1
+        name: Build artifact
+        id: build
+        with:
+          arch: aarch64
+          distro: archarm_latest
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+          githubToken: ${{ secrets.GIT_TK }}
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+          setup: |
+            mkdir -p "${PWD}/artifacts"
+
+          dockerRunArgs: |
+            --volume "${PWD}/artifacts:/artifacts"
+
+          shell: /bin/sh
+
+          install: |
+            pacman -Syyuu --noconfirm && pacman -S git which base-devel binutils make gcc pkg-config fakeroot coreutils kmod mkinitcpio fbset uboot-tools crda xmlto docbook-xsl kmod inetutils bc --noconfirm
+
+          run: |
+            useradd -m -G wheel -s /bin/bash user
+            sudo chown -R user .
+            echo "Makepkg started.."
+            sudo -u user makepkg
+            #echo 123 > filename.tar.zst
+            ls
+            cp -rf *.tar.zst "/artifacts"
+            #cp $(which git) "/artifacts"
+            echo "Produced artifact at /artifacts"
+            echo "Success!"
+
+      - name: Show the artifact
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          ls -al "artifacts/"
+
+      - name: Upload the artifact
+        uses: ncipollo/release-action@main
+        with:
+          tag: linux-odroid-bcdev_1.0
+          allowUpdates: true
+          artifacts: "artifacts/*.tar.zst"
+          body: |
+            linux-odroid (aarch64) fork with binder & ashem support
+          token: ${{ secrets.GIT_TK }}
