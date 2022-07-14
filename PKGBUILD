@@ -269,9 +269,9 @@ build() {
 
   # build!
   unset LDFLAGS
-  make CC="ccache gcc" CXX="ccache g++" ${MAKEFLAGS} Image modules Image.gz
+  make -j 4 CC="ccache gcc" CXX="ccache g++" ${MAKEFLAGS} Image modules Image.gz
   # Generate device tree blobs with symbols to support applying device tree overlays in U-Boot
-  make CC="ccache gcc" CXX="ccache g++" ${MAKEFLAGS} DTC_FLAGS="-@" dtbs
+  make -j 4 CC="ccache gcc" CXX="ccache g++" ${MAKEFLAGS} DTC_FLAGS="-@" dtbs
 }
 
 _package() {
