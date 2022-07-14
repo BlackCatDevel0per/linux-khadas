@@ -257,7 +257,7 @@ build() {
   # ... or manually edit .config
 
   # Copy back our configuration (use with new kernel version)
-  #cp ./.config /var/tmp/${pkgbase}.config
+  cp ./.config /var/tmp/${pkgbase}.config
 
   ####################
   # stop here
