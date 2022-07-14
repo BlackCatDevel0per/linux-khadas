@@ -10,7 +10,7 @@ pkgrel=1
 arch=('aarch64')
 url="http://www.kernel.org/"
 license=('GPL2')
-makedepends=('xmlto' 'docbook-xsl' 'kmod' 'inetutils' 'bc' 'git' 'dtc')
+makedepends=('xmlto' 'docbook-xsl' 'kmod' 'inetutils' 'bc' 'git' 'dtc' 'gcc' 'clang' 'llvm' 'llvm-libs')
 options=('!strip')
 source=("http://www.kernel.org/pub/linux/kernel/v5.x/${_srcname}.tar.xz"
         "http://www.kernel.org/pub/linux/kernel/v5.x/patch-${pkgver}.xz"
@@ -244,8 +244,11 @@ prepare() {
 build() {
   cd ${_srcname}
 
+  # Fix kernel config def (noload)
+  cat "${srcdir}/config" > "${_srcname}/.config"
+
   # get kernel version
-  make prepare
+  make -j $(nproc --all) HOSTCC="ccache clang" HOSTCXX="ccache clang++" CC="ccache gcc" CXX="ccache g++" prepare
 
   # load configuration
   # Configure the kernel. Replace the line below with one of your choice.
@@ -269,9 +272,10 @@ build() {
 
   # build!
   unset LDFLAGS
-  make -j 4 CC="ccache gcc" CXX="ccache g++" ${MAKEFLAGS} Image modules Image.gz
+
+  make -j $(nproc --all) HOSTCC="ccache clang" HOSTCXX="ccache clang++" CC="ccache gcc" CXX="ccache g++" ${MAKEFLAGS} Image modules Image.gz
   # Generate device tree blobs with symbols to support applying device tree overlays in U-Boot
-  make -j 4 CC="ccache gcc" CXX="ccache g++" ${MAKEFLAGS} DTC_FLAGS="-@" dtbs
+  make -j $(nproc --all) HOSTCC="ccache clang" HOSTCXX="ccache clang++" CC="ccache gcc" CXX="ccache g++" ${MAKEFLAGS} DTC_FLAGS="-@" dtbs
 }
 
 _package() {
@@ -294,8 +298,8 @@ _package() {
   _basekernel=${_basekernel%.*}
 
   mkdir -p "${pkgdir}"/{boot,usr/lib/modules}
-  make INSTALL_MOD_PATH="${pkgdir}/usr" modules_install
-  make INSTALL_DTBS_PATH="${pkgdir}/boot/dtbs" dtbs_install
+  make -j $(nproc --all) HOSTCC="ccache clang" HOSTCXX="ccache clang++" CC="ccache gcc" CXX="ccache g++" INSTALL_MOD_PATH="${pkgdir}/usr" modules_install
+  make -j $(nproc --all) HOSTCC="ccache clang" HOSTCXX="ccache clang++" CC="ccache gcc" CXX="ccache g++" INSTALL_DTBS_PATH="${pkgdir}/boot/dtbs" dtbs_install
   cp arch/$KARCH/boot/Image "${pkgdir}/boot"
 
   # make room for external modules
